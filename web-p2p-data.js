@@ -14,6 +14,8 @@ let web_p2p_data = (function(){
    * Private members
    */
   let room = "";
+  let url = "";
+  let socket = null;
   let isChannelReady = false;
   let isInitiator = false;
   let isStarted = false;
@@ -49,73 +51,6 @@ let web_p2p_data = (function(){
     close: [],
     error: []
   };
-
-  /****************************************************************************
-  * Signaling server
-  ****************************************************************************/
-
-  let socket = io.connect('http://signal.hoons.io:5000/');
-  socket.on('created', function(room) {
-    console.log('Created room ' + room);
-    isInitiator = true;
-  });
-
-  socket.on('ready', function (room) {
-    console.log('Another peer made a request to join room ' + room);
-    console.log('This peer is the initiator of room ' + room + '!', isInitiator);
-    isChannelReady = true;
-
-    sendMessage("connect WebRTC");
-    if (isInitiator) { // redundant? TODO
-      maybeStart();
-    }
-  });
-
-  socket.on('joined', function(room) {
-    console.log('joined: ' + room);
-    isChannelReady = true;
-  });
-
-  socket.on('full', function(room) {
-    console.log('Room ' + room + ' is full');
-  });
-
-  socket.on('log', function(array) {
-    console.log.apply(console, array);
-  });
-
-  ////////////////////////////////////////////////
-
-  function sendMessage(message) {
-    console.log('Client sending message: ', message);
-    socket.emit('message', message);
-  }
-
-  socket.on('message', function(message) {
-    console.log('Client received message:', message);
-    if (message === 'connect WebRTC') {
-      maybeStart();
-    } else if (message.type === 'offer') {
-      console.log("Offer!");
-      if (!isInitiator && !isStarted) {
-        maybeStart();
-      }
-      peerConnection.setRemoteDescription(new RTCSessionDescription(message));
-      doAnswer();
-    } else if (message.type === 'answer' && isStarted) {
-      console.log("Answer!");
-      peerConnection.setRemoteDescription(new RTCSessionDescription(message));
-    } else if (message.type === 'candidate' && isStarted) {
-      let candidate = new RTCIceCandidate({
-        sdpMLineIndex: message.label,
-        candidate: message.candidate
-      });
-      peerConnection.addIceCandidate(candidate);
-    } else if (message === 'bye' && isStarted) {
-      handleRemoteHangUp();
-    }
-  });
-
 
   /****************************************************************************
   * WebRTC peer connection and data channel
@@ -326,8 +261,73 @@ let web_p2p_data = (function(){
    * 
    */
   return {
-    init: function(_room) {
+    init: function(_room, _url) {
       room = _room;
+      url = _url;
+      socket = io.connect(url);
+      
+      /****************************************************************************
+      * Signaling server
+      ****************************************************************************/
+      socket.on('created', function(room) {
+        console.log('Created room ' + room);
+        isInitiator = true;
+      });
+
+      socket.on('ready', function (room) {
+        isChannelReady = true;
+
+        sendMessage("connect WebRTC");
+        if (isInitiator) { // redundant? TODO
+          maybeStart();
+        }
+      });
+
+      socket.on('joined', function(room) {
+        console.log('joined: ' + room);
+        isChannelReady = true;
+      });
+
+      socket.on('full', function(room) {
+        console.log('Room ' + room + ' is full');
+      });
+
+      socket.on('log', function(array) {
+        console.log.apply(console, array);
+      });
+
+      ////////////////////////////////////////////////
+
+      function sendMessage(message) {
+        console.log('Client sending message: ', message);
+        socket.emit('message', message);
+      }
+
+      socket.on('message', function(message) {
+        console.log('Client received message:', message);
+        if (message === 'connect WebRTC') {
+          maybeStart();
+        } else if (message.type === 'offer') {
+          console.log("Offer!");
+          if (!isInitiator && !isStarted) {
+            maybeStart();
+          }
+          peerConnection.setRemoteDescription(new RTCSessionDescription(message));
+          doAnswer();
+        } else if (message.type === 'answer' && isStarted) {
+          console.log("Answer!");
+          peerConnection.setRemoteDescription(new RTCSessionDescription(message));
+        } else if (message.type === 'candidate' && isStarted) {
+          let candidate = new RTCIceCandidate({
+            sdpMLineIndex: message.label,
+            candidate: message.candidate
+          });
+          peerConnection.addIceCandidate(candidate);
+        } else if (message === 'bye' && isStarted) {
+          handleRemoteHangUp();
+        }
+      });
+      
       if (room !== '') {
         socket.emit('create or join', room);
         console.log('Attempted to create or join room', room);
