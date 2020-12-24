@@ -11,9 +11,9 @@ Web-P2P-Data is a javascript library for enabling peer to peer communication of 
 
 ### init
 ```
-p2p_data.init(room_id);
+p2p_data.init(room_id, url);
 ```
-Start establishing peer to peer connection. Peers with the same room_id are connected.
+Start establishing peer to peer connection. Peers with the same 'room_id' are connected. The parameter 'url' indicates a signal server.
 
 ### sendDataToPeers
 ```
