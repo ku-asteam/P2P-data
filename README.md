@@ -5,7 +5,7 @@ A JavaScript library for data communication between browsers
 Web-P2P-Data is a javascript library for enabling peer to peer communication of web browsers or pages. This library helps to establish a WebRTC connection with another browser or web page. For establishing the WebRTC connecting, this library tries to communicate with signal server through socket.io. After the WebRTC connection is established, a data channel is created to perform direct communication between browsers or between web pages.
 
 ## Requirements
-* socket.io
+* socket.io (>= 3.0.0)
 
 ## Instructions
 
